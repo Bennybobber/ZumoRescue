@@ -183,79 +183,55 @@ void searchRoom() {
 void autoMode() {
     incomingByte = Serial.read();
     sensors.read(line_sensor_values);
-    Serial.println("Line data: ");
-    Serial.println(line_sensor_values[0]);
-    Serial.println(line_sensor_values[1]);
-    Serial.println(line_sensor_values[2]);
-    Serial.println("Calibrate dataZ: ");
-    Serial.println(calibrateData[0]);
-    Serial.println(calibrateData[1]);
-    Serial.println(calibrateData[2]);
-    // Check if a stop command is being sent
+    
     if ( incomingByte == 'z' )
     {
+        // Stop command recived so STOP and go back to manual control
         motors.setSpeeds(HALT, HALT);
         robotMode = 0;
     }
     else if ( incomingByte == 'r' )
-    {
+    {   
+        //Allow user to log the room before moving forward
         logRoom();
+        robotMode = 0;
     }
-    else if ((line_sensor_values[0] > calibrateData[0] ) && (line_sensor_values[1] > calibrateData[1] + 200 ) || (line_sensor_values[1] > calibrateData[1] + 200 ) && (line_sensor_values[2] > calibrateData[2] )) {
+    else if ((line_sensor_values[0] > calibrateData[0] ) && (line_sensor_values[1] > calibrateData[1] ) || (line_sensor_values[1] > calibrateData[1] ) && (line_sensor_values[2] > calibrateData[2] )) {
 
     // if the middle sensors detect line, stop
     motors.setSpeeds(HALT, HALT);
-    Serial.println("Wall Detected! 1");
+    Serial.println("Wall Detected!");
     Serial.println("Manual Mode activated");
     robotMode = 0;
     }
 
-    else if (line_sensor_values[2] >= calibrateData[2]+150)
+    else if (line_sensor_values[2] >= calibrateData[2])
     {
-        // if rightmost sensor detects line, reverse and turn to the left
-        // motors.setSpeeds(-MOVE_SPEED, -MOVE_SPEED);
+        // If right most line sensor detects line move left.
         Serial.println("Correcting left...");
         delay(200);
         motors.setSpeeds(-TURN_SPEED, TURN_SPEED);
         delay(150);
         motors.setSpeeds(AUTO_SPEED, AUTO_SPEED);
-        // leftProximityCount++;
-        if (leftProximityCount > 3)
-        {
-            Serial.println("Wall Detected! 2");
-            Serial.println("Manual Mode activated");
-            robotMode = 0;
-            motors.setSpeeds(HALT, HALT);
-        }
         robotMode = 1;
     }
-    else if (line_sensor_values[0] >= calibrateData[0]+150) {
+    else if (line_sensor_values[0] >= calibrateData[0]) {
 
-        // if leftmost sensor detects line, reverse and turn to the right
-        // motors.setSpeeds(-MOVE_SPEED, -MOVE_SPEED);
+        // If left most line sensor detects line move right.
         Serial.println("Correcting right...");
         delay(200);
         motors.setSpeeds(TURN_SPEED, -TURN_SPEED);
         delay(150);
         motors.setSpeeds(AUTO_SPEED, AUTO_SPEED);
-    // rightProximityCount++;
-        if (rightProximityCount > 3)
-        {
-        Serial.println("Wall Detected! 3");
-        Serial.println("Manual Mode activated");
-        motors.setSpeeds(HALT, HALT);
-        robotMode = 0;
-        }
         robotMode = 1;
     }
     else
     {
-        // otherwise, go straight
-        Serial.println("Made it here...");
+        // Go straight forward if not hitting any line
+        Serial.println("Going forward...");
         motors.setSpeeds(AUTO_SPEED, AUTO_SPEED);
         robotMode = 1;
     }
-    // 
 
 };
 
@@ -284,17 +260,11 @@ void calibrateZumo() {
 
     for (int i = 0; i < NO_SENSORS; i++)
     {
-        calibrateData[i] = sensors.calibratedMaximumOn[i];
+        //Get the maximums (lightest areas) then add 150 to add a margin of error.
+        calibrateData[i] = sensors.calibratedMaximumOn[i] + 150;
     }
     motors.setSpeeds(HALT, HALT);
     buzzer.play(">g32>>c32");
-    Serial.println("Calibrate data: ");
-    Serial.println(calibrateData[0]);
-    Serial.println(calibrateData[1]);
-    Serial.println(calibrateData[2]);
-    // Serial.println(calibrateData[4]);
-    // Serial.println(calibrateData[5]);
-    // Serial.println(calibrateData[6]);
     Serial.println("Calibration has completed");
 
 };
