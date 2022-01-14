@@ -203,11 +203,6 @@ void searchRoom() {
     {
         // Spin zumo around, and scan using the IR sensors
         proxSensors.read();
-        //Serial1.println(" ");
-        //Serial1.print(proxSensors.countsFrontWithLeftLeds());
-        //Serial1.print(" : ");
-        //Serial1.print(proxSensors.countsFrontWithRightLeds());
-        //Serial1.print(proxSensors.getNumBrightnessLevels());
         uint8_t leftValue = proxSensors.countsFrontWithLeftLeds();
         uint8_t rightValue = proxSensors.countsFrontWithRightLeds();
         if ((i > 10 && i <= 30) || (i > 50 && i <= 70) || (i > 90 && i <= 110) ||  (i > 130 && i <= 150) )
@@ -349,8 +344,7 @@ void autoMode() {
         if (wallHitCount > 1) {
             motors.setSpeeds(-TURN_SPEED, TURN_SPEED);
             Serial1.println("Straightening Up!");
-            delay(200);
-            
+            delay(200); 
         }
     }
     else
@@ -360,7 +354,6 @@ void autoMode() {
         motors.setSpeeds(AUTO_SPEED, AUTO_SPEED);
         robotMode = 1;
         wallHitCount = 0;
-        
     }
 
 };
