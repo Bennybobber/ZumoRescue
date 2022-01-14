@@ -42,14 +42,14 @@
 #define TURN_SPEED 250
 #define CALIBRATE_SPEED 100
 #define MOVE_SPEED 350
-#define AUTO_SPEED 125
+#define AUTO_SPEED 100
 #define HALT 0
 
 // Sesnsor variables
 #define NO_SENSORS 3
 #define LEFT false
 #define RIGHT true
-#define IR_THRESHOLD 5
+#define IR_THRESHOLD 6
 
 // setup library class objects
 Zumo32U4Motors motors;
@@ -72,6 +72,7 @@ String rooms[10];
 String people[10];
 String room;
 bool sensDir = RIGHT; // last indication of the direction of an object
+bool listenMessages = true;
 
 /*
 	Setup the serial port we're going to use.
@@ -168,7 +169,6 @@ void manualControl() {
             Serial1.println("Auto pilot activated");
             buzzer.play(">g32>>c32");
             robotMode = 1;
-            
             break;
     
     }
@@ -197,13 +197,17 @@ void searchRoom() {
     }
     // Move zumo into the room.
     motors.setSpeeds(AUTO_SPEED, AUTO_SPEED);
-    delay(450);
+    delay(800);
     motors.setSpeeds(HALT, HALT);
     for (int i = 0; i < 40; i++)
     {
         // Spin zumo around, and scan using the IR sensors
         proxSensors.read();
-        
+        //Serial1.println(" ");
+        //Serial1.print(proxSensors.countsFrontWithLeftLeds());
+        //Serial1.print(" : ");
+        //Serial1.print(proxSensors.countsFrontWithRightLeds());
+        //Serial1.print(proxSensors.getNumBrightnessLevels());
         uint8_t leftValue = proxSensors.countsFrontWithLeftLeds();
         uint8_t rightValue = proxSensors.countsFrontWithRightLeds();
         if ((i > 10 && i <= 30) || (i > 50 && i <= 70) || (i > 90 && i <= 110) ||  (i > 130 && i <= 150) )
@@ -220,13 +224,15 @@ void searchRoom() {
         }
         delay(60);
         //If a person is found, it's time to stop moving and inform the user
-        objectSeen = leftValue > IR_THRESHOLD || rightValue > IR_THRESHOLD;
+        if (leftValue == IR_THRESHOLD || rightValue == IR_THRESHOLD)
+            objectSeen = true;
         
     }
     motors.setSpeeds(HALT, HALT);
     //Stop the motors if there is nothing found
     if (objectSeen)
     {
+        Serial1.println(" ");
         Serial1.print("Person FOUND in room: ");
         Serial1.print(noOfRooms);
         Serial1.print(" on the ");
@@ -236,6 +242,7 @@ void searchRoom() {
     }
     else
     {
+        Serial1.println("");
         Serial1.print("No PERSON in room: ");
         Serial1.print(noOfRooms);
         Serial1.print(" on the ");
@@ -244,10 +251,11 @@ void searchRoom() {
     }
     // Wait 2 seconds to show message before leaving.
     delay(2000);
-    Serial.println("Returning to corridor");
+    Serial1.println("");
+    Serial1.println("Returning to corridor");
     // Reverse out of the room.
     motors.setSpeeds(-AUTO_SPEED, -AUTO_SPEED);
-    delay(450);
+    delay(750);
     motors.setSpeeds(HALT, HALT);
     if (rooms[noOfRooms] == "left")
     {
@@ -255,7 +263,7 @@ void searchRoom() {
     }
     else
     {
-        turn90(LEFT);
+         turn90(LEFT);
     }  
 
 
@@ -286,16 +294,19 @@ void autoMode() {
         motors.setSpeeds(HALT, HALT);
         robotMode = 0;
     }
-    else if ( incomingByte == 'r' )
-    {   Serial1.println("Room Found!");
+    else if ( (incomingByte == 'r') && (listenMessages == true))
+    {   Serial1.println("Room Located!");
         //Allow user to log the room before moving forward
         logRoom();
         searchRoom();
         robotMode = 1;
     }
+    else if ( (incomingByte == 'p') && (listenMessages != true))
+    {
+        listenMessages = true;
+    }
     // Check if the Zumo has hit a wall.
     else if ((wallHitCount >= 2) || (line_sensor_values[1] > calibrateData[1])) {
-
     // if the middle sensors detect line, reverse away then stop.
     motors.setSpeeds(-AUTO_SPEED, -AUTO_SPEED);
     delay(125);
@@ -314,32 +325,31 @@ void autoMode() {
         // If right most line sensor detects line move left.
         Serial1.println("Correcting left...");
         motors.setSpeeds(-TURN_SPEED, TURN_SPEED);
-        delay(175);
+        delay(100);
         robotMode = 1;
         wallHitCount++;
         // Straighten the Zumo up since it's hit the far wall
         if (wallHitCount > 1) {
             motors.setSpeeds(TURN_SPEED, -TURN_SPEED);
             Serial1.println("Straightening Up!");
-            delay(325);
+            delay(200);
         }
     }
 
     // Check if the left most sensor is over the line
     else if ((line_sensor_values[0] >= calibrateData[0]) && (line_sensor_values[1] < calibrateData[1])) {
-
         // If left most line sensor detects line move right.
         // motors.setSpeeds(-TURN_SPEED, -TURN_SPEED);
         Serial1.println("Correcting right...");
         motors.setSpeeds(TURN_SPEED, -TURN_SPEED);
-        delay(175);
+        delay(100);
         robotMode = 1;
         wallHitCount++;
         // Straighten the Zumo up since it's hit the far wall
         if (wallHitCount > 1) {
             motors.setSpeeds(-TURN_SPEED, TURN_SPEED);
             Serial1.println("Straightening Up!");
-            delay(325);
+            delay(200);
             
         }
     }
@@ -350,6 +360,7 @@ void autoMode() {
         motors.setSpeeds(AUTO_SPEED, AUTO_SPEED);
         robotMode = 1;
         wallHitCount = 0;
+        
     }
 
 };
@@ -472,8 +483,9 @@ void junction() {
         turn90(LEFT);
         turn90(LEFT);
         Serial1.println("Continuing Search!");
-        //Go back to auto mode
         robotMode = 1;
+        // Ensure that the zumo can no longer search
+        listenMessages = false;
     }
     else if (stopCount == 3) {
         Serial1.println("We've reached the end of the journey.");

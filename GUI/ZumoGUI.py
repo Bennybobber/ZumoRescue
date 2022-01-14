@@ -84,8 +84,10 @@ while True:
     else:
         screen.blit(smallfont.render('Press "z" emergency stop!', True, black) , (10,200))
         screen.blit(smallfont.render('Press "r" stop zumo then "l" or "r" to intiate', True, black) , (10,250))
-        screen.blit(smallfont.render('a search of the room, which is done automatically.', True, black) , (10,300))
-        screen.blit(smallfont.render('At the end of the corridor, follow the instructions.', True, black) , (10,450))
+        screen.blit(smallfont.render('A search of the room, which is done automatically.', True, black) , (10,300))
+        screen.blit(smallfont.render('At the end of the corridor, follow the instructions.', True, black) , (10,375))
+        screen.blit(smallfont.render('After the 180 degree turn, press "p" to mark past', True, black) , (10,425))
+        screen.blit(smallfont.render('the T junction and activate room search again', True, black) , (10,475))
         pygame.draw.rect(screen,green,[60,600,425,40])
         screen.blit(smallfont.render('Show Manual Instructions', True, white) , (70,600))
     
