@@ -8,7 +8,7 @@ pygame.init()
 pygame.font.init()
 
 res = (720, 720)
-ser=serial.Serial('COM6',9600,timeout=1)
+ser=serial.Serial('COM3',9600,timeout=1)
 def worker():
 
    global CURHR

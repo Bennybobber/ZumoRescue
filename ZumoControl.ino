@@ -29,11 +29,10 @@
 */
 
 // External libraries
-
 #include <Zumo32U4Motors.h>
 #include <Zumo32U4Buzzer.h>
 #include <Zumo32U4ProximitySensors.h>
-#include <ZumoReflectanceSensorArray.h>
+#include <Zumo32U4LineSensors.h>
 #include <Zumo32U4Encoders.h>
 #include <Wire.h>
 // Global Variables
@@ -49,13 +48,15 @@
 #define NO_SENSORS 3
 #define LEFT false
 #define RIGHT true
-#define IR_THRESHOLD 6
+#define IR_THRESHOLD 5
 
 // setup library class objects
 Zumo32U4Motors motors;
-ZumoReflectanceSensorArray sensors(QTR_NO_EMITTER_PIN);
+Zumo32U4LineSensors sensors;
 Zumo32U4Buzzer buzzer;
 Zumo32U4Encoders encoders;
+Zumo32U4ProximitySensors proxSensors;
+    
 
 // setup general variables
 unsigned int line_sensor_values[NO_SENSORS];
@@ -84,6 +85,7 @@ void setup() {
     Serial1.begin(9600);
     incomingByte = Serial1.read();
     Serial1.println("Zumo Ready To Calibrate, press C to start");
+    
     while (incomingByte != 'c')
     {
         incomingByte = (char) Serial1.read();
@@ -183,8 +185,7 @@ void manualControl() {
 */
 void searchRoom() {
     Serial1.println("Searching Room...");
-    Zumo32U4ProximitySensors proxSensors;
-    proxSensors.initFrontSensor(SENSOR_NO_PIN);
+    
     bool objectSeen = false;
     // make the turn for the room
     if (rooms[noOfRooms] == "left")
@@ -301,10 +302,7 @@ void autoMode() {
         listenMessages = true;
     }
     // Check if the Zumo has hit a wall.
-    else if ((wallHitCount >= 2) || (line_sensor_values[1] > calibrateData[1])) {
-    // if the middle sensors detect line, reverse away then stop.
-    motors.setSpeeds(-AUTO_SPEED, -AUTO_SPEED);
-    delay(125);
+    else if ((line_sensor_values[0] >= calibrateData[0] && line_sensor_values[2] >= calibrateData[2]) || line_sensor_values[1] >= calibrateData[1]){
     motors.setSpeeds(HALT, HALT);
     Serial1.println("Wall Detected!");
     wallHitCount = 0;
@@ -320,15 +318,6 @@ void autoMode() {
         // If right most line sensor detects line move left.
         Serial1.println("Correcting left...");
         motors.setSpeeds(-TURN_SPEED, TURN_SPEED);
-        delay(100);
-        robotMode = 1;
-        wallHitCount++;
-        // Straighten the Zumo up since it's hit the far wall
-        if (wallHitCount > 1) {
-            motors.setSpeeds(TURN_SPEED, -TURN_SPEED);
-            Serial1.println("Straightening Up!");
-            delay(200);
-        }
     }
 
     // Check if the left most sensor is over the line
@@ -337,15 +326,6 @@ void autoMode() {
         // motors.setSpeeds(-TURN_SPEED, -TURN_SPEED);
         Serial1.println("Correcting right...");
         motors.setSpeeds(TURN_SPEED, -TURN_SPEED);
-        delay(100);
-        robotMode = 1;
-        wallHitCount++;
-        // Straighten the Zumo up since it's hit the far wall
-        if (wallHitCount > 1) {
-            motors.setSpeeds(-TURN_SPEED, TURN_SPEED);
-            Serial1.println("Straightening Up!");
-            delay(200); 
-        }
     }
     else
     {
@@ -363,8 +343,10 @@ void autoMode() {
 void calibrateZumo() {
     Serial1.println("Calibrating sensors...");
     // Intiate the sensors with the correct pins to use.
-    byte pins[] = {A0, A3, 12};
-    sensors.init(pins, 3);
+    proxSensors.initFrontSensor();
+    delay(100);
+    sensors.initThreeSensors();
+    delay(100);
     for (int i = 0; i < 160; i++)
     {
         // Developed from the maze solver, however uses higher range.
@@ -422,6 +404,8 @@ void logRoom() {
     Serial1.print(noOfRooms);
     Serial1.print(" is on the ");
     Serial1.print(rooms[noOfRooms]);
+    delay(500);
+    Serial1.println();
 };
 
 /*
@@ -442,7 +426,7 @@ void logRoom() {
 void junction() {
     Serial1.println("Wall encountered!");
     incomingByte = ' ';
-    if (stopCount == 1)
+    if (stopCount <=2 )
     {
         Serial1.println("Do you wish to go left, or right?");
         while ((incomingByte != 'l') && (incomingByte != 'r'))
@@ -464,7 +448,7 @@ void junction() {
         Serial1.println("Continuing Search!");
         robotMode = 1;
     }
-    else if (stopCount == 2)
+    else if (stopCount == 3)
     {
         // Wait until the B key is pressed
         Serial1.println("Press 'B' to turn 180 degrees and continue.");
@@ -480,7 +464,7 @@ void junction() {
         // Ensure that the zumo can no longer search
         listenMessages = false;
     }
-    else if (stopCount == 3) {
+    else if (stopCount == 4) {
         Serial1.println("We've reached the end of the journey.");
         robotMode = 0;
         stopCount = 0;
