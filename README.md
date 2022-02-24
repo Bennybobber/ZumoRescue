@@ -46,6 +46,4 @@ Auto Mode:
 ## Authors
  ** Benjamin Sinyard ** 
 
-## Video Demo
 
-https://www.youtube.com/watch?v=MuoVFAOR4T4
